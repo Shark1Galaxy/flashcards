@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Flashcards</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow: auto; /* Allow scrolling if content is too large */
+        }
+        .flashcard-container {
+            perspective: 1000px; /* For 3D flip effect */
+            width: 100%;
+            max-width: 500px; /* Max width for the card */
+            height: 300px; /* Fixed height for the card */
+            margin-bottom: 20px;
+        }
+        .flashcard {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Soft shadow */
+            cursor: pointer;
+        }
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden; /* Hide the back when facing front */
+            display: flex;
+            flex-direction: column; /* Allow content to stack */
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 1rem; /* Rounded corners */
+            box-sizing: border-box;
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 600; /* font-semibold */
+            color: #1a202c; /* text-gray-900 */
+        }
+        .flashcard-front {
+            background-color: #ffffff; /* White background for front */
+            color: #2d3748; /* text-gray-800 */
+        }
+        .flashcard-back {
+            background-color: #edf2f7; /* Light gray background for back */
+            color: #2d3748; /* text-gray-800 */
+            transform: rotateY(180deg); /* Start rotated */
+        }
+        .phonetic-text {
+            font-size: 1rem; /* Smaller font for phonetic */
+            color: #4a5568; /* Gray color for phonetic */
+            margin-top: 0.5rem; /* Space between English and phonetic */
+            font-weight: 400; /* Regular weight */
+        }
+        .nav-button {
+            @apply px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75;
+        }
+        /* Mobile adjustments */
+        @media (max-width: 640px) {
+            .flashcard-container {
+                height: 250px; /* Slightly smaller height on mobile */
+            }
+            .flashcard-front, .flashcard-back {
+                font-size: 1.5rem; /* Smaller font on mobile */
+                padding: 1.5rem;
+            }
+            .phonetic-text {
+                font-size: 0.875rem; /* Smaller phonetic font on mobile */
+            }
+            .nav-button {
+                @apply px-4 py-2 text-base;
+            }
+            .flex-col-reverse-sm {
+                flex-direction: column-reverse;
+            }
+            .mt-8-sm {
+                margin-top: 2rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col justify-center items-center min-h-screen p-4">
+
+    <div class="max-w-xl w-full flex flex-col items-center">
+        <!-- Application Title -->
+        <h1 class="text-4xl font-bold text-gray-800 mb-8 mt-8-sm text-center">
+            English Flashcards <span class="text-blue-600">🇬🇧</span>
+        </h1>
+
+        <!-- Flashcard Container -->
+        <div id="flashcard-container" class="flashcard-container">
+            <div id="flashcard" class="flashcard">
+                <div id="flashcard-front" class="flashcard-front"></div>
+                <div id="flashcard-back" class="flashcard-back"></div>
+            </div>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex flex-col-reverse-sm sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 w-full justify-center">
+            <button id="prev-btn" class="nav-button">Anterior</button>
+            <button id="next-btn" class="nav-button">Próximo</button>
+        </div>
+    </div>
+
+    <script>
+        // Array of flashcard data (English: front, Phonetic: phonetic pronunciation / advanced version, Portuguese: back)
+        const flashcards = [
+            // Phrases with specific phonetics
+            { english: "I am on my way", phonetic: "Amon mauei", portuguese: "Estou a caminho." },
+            { english: "Do you want to?", phonetic: "Djuana", portuguese: "Você quer?" },
+            { english: "look at you", phonetic: "Luketchu", portuguese: "Olha você!" },
+            { english: "Take Care", phonetic: "Teikérr", portuguese: "Cuide-se!" },
+            { english: "This is not", phonetic: "Sisnóh", portuguese: "Isso não é." },
+
+            // Basic / Advanced Pairs
+            { english: "Basic: I'm sorry", phonetic: "My bad", portuguese: "Sinto muito." },
+            { english: "Basic: I'll pay", phonetic: "it's on me", portuguese: "Eu pago." },
+            { english: "Basic: You're right", phonetic: "Good point", portuguese: "Você está certo." },
+            { english: "Basic: Wait a moment", phonetic: "Hang on", portuguese: "Espere um momento." },
+            { english: "Basic: I finished", phonetic: "i'm done", portuguese: "Eu terminei." },
+            { english: "Basic: I'm fine.", phonetic: "I'm well.", portuguese: "Estou bem." },
+            { english: "Basic: Thanks", phonetic: "Cheers", portuguese: "Obrigado!" },
+            { english: "Basic: Good", phonetic: "Amazing", portuguese: "Bom." },
+            { english: "Basic: Sorry", phonetic: "My bad", portuguese: "Desculpe." },
+            { english: "Basic: Goodbye", phonetic: "I'm off", portuguese: "Adeus." },
+            { english: "Basic: Yes", phonetic: "Yep", portuguese: "Sim." },
+            { english: "Basic: No!", phonetic: "Nah!", portuguese: "Não!" },
+            { english: "Basic: Stop it.", phonetic: "Cut it out.", portuguese: "Pare com isso." },
+            { english: "Basic: Bye", phonetic: "Toodles", portuguese: "Tchau." },
+            { english: "Basic: I forgot it.", phonetic: "It slipped my mind.", portuguese: "Eu esqueci." },
+            { english: "Basic: I feel sad.", phonetic: "I feel blue.", portuguese: "Eu me sinto triste." },
+            { english: "Basic: Hurry up", phonetic: "Chop-chop", portuguese: "Ande logo!" },
+            { english: "Basic: Calm down", phonetic: "Chill out", portuguese: "Acalme-se." },
+            { english: "Basic: I understand.", phonetic: "I gotcha.", portuguese: "Eu entendo." },
+            { english: "Basic: Let's go", phonetic: "Let's bounce", portuguese: "Vamos." },
+            { english: "Basic: It's ok", phonetic: "No biggie", portuguese: "Está tudo bem." },
+            { english: "Basic: I'm serious.", phonetic: "I mean it.", portuguese: "Estou falando sério." },
+
+            // Chat like a pro
+            { english: "10Q", phonetic: "Thank you.", portuguese: "Obrigado." },
+            { english: "CU", phonetic: "See you.", portuguese: "Até mais." },
+            { english: "IDK", phonetic: "I don't know.", portuguese: "Eu não sei." },
+            { english: "4U", phonetic: "For you.", portuguese: "Para você." },
+            { english: "IDK", phonetic: "I don't care.", portuguese: "Não me importo." },
+            { english: "ILY", phonetic: "I love you.", portuguese: "Eu te amo." },
+            { english: "OMG", phonetic: "Oh my God!", portuguese: "Oh meu Deus!" },
+            { english: "THX", phonetic: "???????", portuguese: "Obrigado." },
+            { english: "NM", phonetic: "Not much.", portuguese: "Não muito." },
+            { english: "ATM", phonetic: "At the moment.", portuguese: "No momento." },
+            { english: "BTW", phonetic: "By the way.", portuguese: "A propósito." },
+            { english: "LOL", phonetic: "Laugh out loud.", portuguese: "Rir alto." },
+            { english: "NVM", phonetic: "Never mind.", portuguese: "Deixa pra lá." },
+            { english: "PPL", phonetic: "People.", portuguese: "Pessoas." },
+            { english: "TTYL", phonetic: "Talk to you later", portuguese: "Falo com você mais tarde." },
+            { english: "Wdym?", phonetic: "What do you mean?", portuguese: "O que você quer dizer?" },
+            { english: "Lkr", phonetic: "I know, right", portuguese: "Eu sei, né?" },
+            { english: "Asap", phonetic: "As soon as possible", portuguese: "Assim que possível." },
+            { english: "Idc", phonetic: "I don't care", portuguese: "Não me importo." },
+
+            // Informal VS Formal
+            { english: "Informal: Also", phonetic: "Formal: Furthermore", portuguese: "Informal: Também / Formal: Além disso" },
+            { english: "Informal: Ask", phonetic: "Formal: Inquire", portuguese: "Informal: Perguntar / Formal: Inquirir" },
+            { english: "Informal: A lot", phonetic: "Formal: Numerous", portuguese: "Informal: Muito / Formal: Numerosos" },
+            { english: "Informal: Hang on", phonetic: "Formal: Wait", portuguese: "Informal: Espera / Formal: Espere" },
+            { english: "Informal: Help", phonetic: "Formal: Assist", portuguese: "Informal: Ajuda / Formal: Auxiliar" },
+            { english: "Informal: But", phonetic: "Formal: However", portuguese: "Informal: Mas / Formal: No entanto" },
+
+            // To sit variations
+            { english: "A1 Can I sit here?", phonetic: "Can I sit here?", portuguese: "Posso sentar aqui?" },
+            { english: "A2 Could I sit here?", phonetic: "Could I sit here?", portuguese: "Poderia sentar aqui?" },
+            { english: "B1 Is this seat free?", phonetic: "Is this seat free?", portuguese: "Este assento está livre?" },
+            { english: "B2 Is it ok if I sit here?", phonetic: "Is it ok if I sit here?", portuguese: "Está tudo bem se eu sentar aqui?" },
+            { english: "C1 Is this seat taken?", phonetic: "Is this seat taken?", portuguese: "Este assento está ocupado?" },
+            { english: "C2 May I?", phonetic: "May I?", portuguese: "Posso?" },
+
+            // Basic / Advanced Pairs (from table)
+            { english: "Basic: How are you?", phonetic: "How have you been?", portuguese: "Como você está?" },
+            { english: "Basic: I am fine.", phonetic: "I'm doing great, thanks for asking!", portuguese: "Estou bem." },
+            { english: "Basic: What are you doing?", phonetic: "What are you up to?", portuguese: "O que você está fazendo?" },
+            { english: "Basic: Nice to meet you.", phonetic: "Pleasure to meet you.", portuguese: "Prazer em conhecê-lo(a)." },
+            { english: "Basic: I woke up late.", phonetic: "I overslept today.", portuguese: "Eu acordei tarde." },
+            { english: "Basic: I am eating lunch.", phonetic: "I'm grabbing a quick bite.", portuguese: "Estou almoçando." },
+            { english: "Basic: I am very busy.", phonetic: "I'm swamped with work.", portuguese: "Estou muito ocupado." },
+            { english: "Basic: Let's go outside.", phonetic: "Let's step out for some fresh air.", portuguese: "Vamos lá fora." },
+            { english: "Basic: I am happy.", phonetic: "I'm on cloud nine.", portuguese: "Estou feliz." },
+            { english: "Basic: I am sad.", phonetic: "I'm feeling down.", portuguese: "Estou triste." },
+            { english: "Basic: I don't know.", phonetic: "I have no clue.", portuguese: "Eu não sei." },
+            { english: "Basic: It's very important.", phonetic: "It's absolutely crucial.", portuguese: "É muito importante." },
+            { english: "Basic: Help me.", phonetic: "Could you lend me a hand?", portuguese: "Me ajude." },
+            { english: "Basic: Wait a minute.", phonetic: "Hold on for a sec.", portuguese: "Espere um minuto." },
+            { english: "Basic: Can you repeat?", phonetic: "Could you say that again?", portuguese: "Você pode repetir?" },
+            { english: "Basic: Let's start.", phonetic: "Let's get the ball rolling.", portuguese: "Vamos começar." },
+            { english: "Basic: I am tired.", phonetic: "I'm completely worn out.", portuguese: "Estou cansado." },
+            { english: "Basic: It's too expensive.", phonetic: "It costs a fortune.", portuguese: "É muito caro." },
+            { english: "Basic: I'm going to sleep.", phonetic: "I'm hitting the sack.", portuguese: "Vou dormir." },
+            { english: "Basic: I understand.", phonetic: "That makes sense.", portuguese: "Eu entendo." },
+
+            // Symbols
+            { english: "@", phonetic: "At", portuguese: "Arroba" },
+            { english: "/", phonetic: "Slash", portuguese: "Barra" },
+            { english: "*", phonetic: "Asterisk", portuguese: "Asterisco" },
+            { english: "(-)", phonetic: "Hyphen", portuguese: "Hífen" },
+            { english: "(_)", phonetic: "Underscore", portuguese: "Sublinhado" },
+            { english: ".", phonetic: "Dot", portuguese: "Ponto" },
+            { english: ",", phonetic: "Comma", portuguese: "Vírgula" },
+            { english: ":", phonetic: "Colon", portuguese: "Dois pontos" },
+            { english: ";", phonetic: "Semicolon", portuguese: "Ponto e vírgula" },
+
+            // Ways to say Thank you
+            { english: "A1 - Thank you", phonetic: "A1 - Thank you", portuguese: "A1 - Obrigado" },
+            { english: "A2 - Thanks a lot", phonetic: "A2 - Thanks a lot", portuguese: "A2 - Muito obrigado" },
+            { english: "B1 - I appreciate it", phonetic: "B1 - I appreciate it", portuguese: "B1 - Eu aprecio" },
+            { english: "B2 - I'm so grateful", phonetic: "B2 - I'm so grateful", portuguese: "B2 - Sou muito grato" },
+            { english: "C1 - I owe you one", phonetic: "C1 - I owe you one", portuguese: "C1 - Te devo uma" },
+
+            // Don't Say / Instead Say
+            { english: "Don't Say: \"I don't know\"", phonetic: "Instead Say: \"I'll check.\"", portuguese: "Não diga: \"Eu não sei\"" },
+            { english: "Don't Say: \"Thanks for that.\"", phonetic: "Instead Say: \"I appreciate it.\"", portuguese: "Não diga: \"Obrigado por isso.\"" },
+            { english: "Don't Say: \"Sorry I missed that.\"", phonetic: "Instead Say: \"Could you repeat that?\"", portuguese: "Não diga: \"Desculpe, perdi isso.\"" },
+            { english: "Don't Say: \"Sorry I'm late.\"", phonetic: "Instead Say: \"Thanks for your patience.\"", portuguese: "Não diga: \"Desculpe o atraso.\"" },
+            { english: "Don't Say: \"That's not my job.\"", phonetic: "Instead Say: \"I'll find the right help.\"", portuguese: "Não diga: \"Isso não é meu trabalho.\"" },
+            { english: "Don't Say: \"You're wrong.\"", phonetic: "Instead Say: \"I see it differently.\"", portuguese: "Não diga: \"Você está errado.\"" },
+            { english: "Don't Say: \"I'm too busy.\"", phonetic: "Instead Say: \"I'll help later.\"", portuguese: "Não diga: \"Estou muito ocupado.\"" },
+            { english: "Don't Say: \"No problem.\"", phonetic: "Instead Say: \"Happy to help!\"", portuguese: "Não diga: \"Sem problema.\"" },
+            { english: "Don't Say: \"You should have...\"", phonetic: "Instead Say: \"Next time, let's...\"", portuguese: "Não diga: \"Você deveria ter...\"" },
+            { english: "Don't Say: \"Sorry to bother you.\"", phonetic: "Instead Say: \"Got a sec?\"", portuguese: "Não diga: \"Desculpe incomodar.\"" },
+            { english: "Don't Say: \"I don't understand.\"", phonetic: "Instead Say: \"Can you clarify?\"", portuguese: "Não diga: \"Eu não entendo.\"" },
+
+            // Times of Day
+            { english: "SUNRISE", phonetic: "Nascer do sol", portuguese: "Nascer do sol" },
+            { english: "MORNING", phonetic: "Manhã", portuguese: "Manhã" },
+            { english: "NOON", phonetic: "Meio dia", portuguese: "Meio dia" },
+            { english: "AFTERNOON", phonetic: "Tarde", portuguese: "Tarde" },
+            { english: "SUNSET", phonetic: "Pôr do sol", portuguese: "Pôr do sol" },
+            { english: "DUSK", phonetic: "Anoitecer", portuguese: "Anoitecer" },
+            { english: "EVENING", phonetic: "Fim de tarde", portuguese: "Fim de tarde" },
+            { english: "NIGHT", phonetic: "Noite", portuguese: "Noite" },
+            { english: "MIDNIGHT", phonetic: "Meia noite", portuguese: "Meia noite" },
+            { english: "DAWN", phonetic: "Madrugada", portuguese: "Madrugada" },
+
+            // Present Past Future (verbs)
+            { english: "I think", phonetic: "I thought", portuguese: "Eu penso" },
+            { english: "I thought", phonetic: "I will think", portuguese: "Eu pensei" },
+            { english: "I will think", phonetic: "I will think", portuguese: "Eu pensarei" },
+            { english: "I sell", phonetic: "I sold", portuguese: "Eu vendo" },
+            { english: "I sold", phonetic: "I will sell", portuguese: "Eu vendi" },
+            { english: "I will sell", phonetic: "I will sell", portuguese: "Eu venderei" },
+            { english: "I enjoy", phonetic: "I enjoyed", portuguese: "Eu aproveito" },
+            { english: "I enjoyed", phonetic: "I will enjoy", portuguese: "Eu aproveitei" },
+            { english: "I will enjoy", phonetic: "I will enjoy", portuguese: "Eu aproveitarei" },
+            { english: "I find", phonetic: "I found", portuguese: "Eu encontro" },
+            { english: "I found", phonetic: "I will find", portuguese: "Eu encontrei" },
+            { english: "I will find", phonetic: "I will find", portuguese: "Eu encontrarei" },
+            { english: "I call", phonetic: "I called", portuguese: "Eu chamo" },
+            { english: "I called", phonetic: "I will call", portuguese: "Eu chamei" },
+            { english: "I will call", phonetic: "I will call", portuguese: "Eu chamarei" },
+            { english: "I get", phonetic: "I got", portuguese: "Eu pego" },
+            { english: "I got", phonetic: "I will get", portuguese: "Eu peguei" },
+            { english: "I will get", phonetic: "I will get", portuguese: "Eu pegarei" },
+            { english: "I forget", phonetic: "I forgot", portuguese: "Eu esqueço" },
+            { english: "I forgot", phonetic: "I will forget", portuguese: "Eu esqueci" },
+            { english: "I will forget", phonetic: "I will forget", portuguese: "Eu esquecerei" },
+            { english: "I buy", phonetic: "I bought", portuguese: "Eu compro" },
+            { english: "I bought", phonetic: "I will buy", portuguese: "Eu comprei" },
+            { english: "I will buy", phonetic: "I will buy", portuguese: "Eu comprarei" },
+            { english: "I play", phonetic: "I played", portuguese: "Eu brinco" },
+            { english: "I played", phonetic: "I will play", portuguese: "Eu brinquei" },
+            { english: "I will play", phonetic: "I will play", portuguese: "Eu brincarei" },
+            { english: "I work", phonetic: "I worked", portuguese: "Eu trabalho" },
+            { english: "I worked", phonetic: "I will work", portuguese: "Eu trabalhei" },
+            { english: "I will work", phonetic: "I will work", portuguese: "Eu trabalharei" },
+            { english: "I hear", phonetic: "I heard", portuguese: "Eu ouço" },
+            { english: "I heard", phonetic: "I will hear", portuguese: "Eu ouvi" },
+            { english: "I will hear", phonetic: "I will hear", portuguese: "Eu ouvirei" },
+            { english: "I hide", phonetic: "I hid", portuguese: "Eu escondo" },
+            { english: "I hid", phonetic: "I will hide", portuguese: "Eu escondi" },
+            { english: "I will hide", phonetic: "I will hide", portuguese: "Eu esconderei" },
+            { english: "I keep", phonetic: "I kept", portuguese: "Eu guardo" },
+            { english: "I kept", phonetic: "I will keep", portuguese: "Eu guardei" },
+            { english: "I will keep", phonetic: "I will keep", portuguese: "Eu guardarei" },
+            { english: "I break", phonetic: "I broke", portuguese: "Eu quebro" },
+            { english: "I broke", phonetic: "???", portuguese: "Eu quebrei" },
+
+            // Will contractions
+            { english: "I WILL", phonetic: "I'LL /au/", portuguese: "EU VOU" },
+            { english: "YOU WILL", phonetic: "YOU'LL /iuu/", portuguese: "VOCÊ VAI" },
+            { english: "HE WILL", phonetic: "HE'LL /riu/", portuguese: "ELE VAI" },
+            { english: "SHE WILL", phonetic: "SHE'LL /shiu/", portuguese: "ELA VAI" },
+            { english: "IT WILL", phonetic: "IT'LL /iriu/", portuguese: "ISSO VAI" },
+            { english: "THEY WILL", phonetic: "THEY'LL /deu/", portuguese: "ELES VÃO" },
+            { english: "WE WILL", phonetic: "WE'LL /uiu/", portuguese: "NÓS VAMOS" },
+
+            // Informal expressions (from the "Holy Moly" section)
+            { english: "Oh My God!", phonetic: "Holy Moly!", portuguese: "Oh meu Deus!" },
+            { english: "I forgot.", phonetic: "It slipped my mind.", portuguese: "Eu esqueci." },
+            { english: "Excuse me, what did you say?", phonetic: "I'm sorry, come again?", portuguese: "Com licença, o que você disse?" },
+            { english: "You're so beautiful.", phonetic: "You're drop dead gorgeous.", portuguese: "Você é tão linda." },
+            { english: "Calm down.", phonetic: "Take it easy.", portuguese: "Acalme-se." },
+            { english: "I'm listening.", phonetic: "I'm all ears.", portuguese: "Estou ouvindo." },
+            { english: "It's not difficult.", phonetic: "It's a piece of cake.", portuguese: "Não é difícil." },
+            { english: "I agree with you.", phonetic: "We're on the same page.", portuguese: "Eu concordo com você." },
+            { english: "Thank you very much.", phonetic: "I really appreciate it.", portuguese: "Muito obrigado." },
+
+            // Shortened/Slang phrases
+            { english: "It is not", phonetic: "Snot", portuguese: "Não é" },
+            { english: "Let us have", phonetic: "Lesav", portuguese: "Deixe-nos ter" },
+            { english: "Should Have", phonetic: "Shouda", portuguese: "Deveria ter" },
+            { english: "i don't know", phonetic: "(i dunno - no ideia - i've no clue - who knows?)", portuguese: "Eu não sei" },
+            { english: "let's go", phonetic: "skou", portuguese: "vamos" },
+            { english: "did you", phonetic: "juh", portuguese: "você fez/viu" },
+            { english: "good morning", phonetic: "G morning", portuguese: "bom dia" },
+            { english: "fify", phonetic: "FITTEE", portuguese: "cinquenta" },
+            { english: "something", phonetic: "SU -M", portuguese: "algo" },
+            { english: "Come here", phonetic: "K-miãr", portuguese: "Vem aqui" },
+            { english: "What are you doing?", phonetic: "wótchã duin", portuguese: "O que você está fazendo?" },
+            { english: "let me seet that", phonetic: "lémi ci dé", portuguese: "Deixe-me ver isso" },
+            { english: "Give me a second", phonetic: "guemi a séc", portuguese: "Me dê um segundo" },
+            { english: "i am going to go", phonetic: "aimana go", portuguese: "Eu vou" },
+            { english: "Do you have a second", phonetic: "Jav a sec", portuguese: "Você tem um segundo" },
+            { english: "Why did you lie?", phonetic: "Why july", portuguese: "Por que você mentiu?" },
+            { english: "i am going to", phonetic: "a - mã - na", portuguese: "Eu vou" },
+            { english: "Did you have", phonetic: "djév", portuguese: "Você teve" },
+            { english: "i have got to go", phonetic: "Gotta go", portuguese: "Eu tenho que ir" },
+            { english: "What is your", phonetic: "wó-tchiór", portuguese: "Qual é o seu" },
+            { english: "Tell her", phonetic: "Tell her", portuguese: "Diga a ela" },
+            { english: "Give me", phonetic: "GIMME", portuguese: "Me dê" },
+            { english: "Do you not", phonetic: "Dontcha", portuguese: "Você não" },
+            { english: "I have got to", phonetic: "i gotta", portuguese: "Eu tenho que" },
+            { english: "Tell him", phonetic: "TELL - AM", portuguese: "Diga a ele" },
+            { english: "Do you want to go", phonetic: "Dju wanna go?", portuguese: "Você quer ir?" },
+            { english: "i'm greteful", phonetic: "i'm greteful", portuguese: "Sou grato(a)" },
+            { english: "thanks a lot", phonetic: "thanks a lot", portuguese: "Muito obrigado" },
+            { english: "much obliged", phonetic: "much obliged", portuguese: "Muito obrigado" },
+            { english: "endlees thanks", phonetic: "endlees thanks", portuguese: "Agradecimentos infinitos" },
+
+            // Even variations
+            { english: "even so", phonetic: "even so", portuguese: "mesmo assim" },
+            { english: "even if", phonetic: "even if", portuguese: "mesmo se" },
+            { english: "even when", phonetic: "even when", portuguese: "mesmo quando" },
+            { english: "even more", phonetic: "even more", portuguese: "ainda mais" },
+            { english: "even less", phonetic: "even less", portuguese: "ainda menos" },
+            { english: "even better", phonetic: "even better", portuguese: "ainda melhor" },
+            { english: "even worse", phonetic: "uorse", portuguese: "ainda pior" },
+            { english: "even now", phonetic: "even now", portuguese: "mesmo agora" },
+            { english: "even then", phonetic: "even then", portuguese: "mesmo então" },
+            { english: "even though", phonetic: "even though", portuguese: "embora" },
+
+            // Words with "ee" sound
+            { english: "Palavras com 2 ee = Í", phonetic: "feet, beet, creep , sleep, deep, sheep, jeep, meet", portuguese: "Words with 2 ee = I" }, // Keeping your structure for this instruction
+
+            // Enjoy
+            { english: "Enjoy", phonetic: ",", portuguese: "Aproveitar" }, // Phonetic is comma as per your input
+
+            // Polite requests
+            { english: "Alternativas - can i get", phonetic: "can i get", portuguese: "Alternativas - posso pegar" },
+            { english: "i'll have", phonetic: "i'll have", portuguese: "vou querer" },
+            { english: "Mayhe i have", phonetic: "Mayhe i have", portuguese: "Talvez eu possa ter" },
+
+            // Contractions / informal phrases
+            { english: "Let us go now.", phonetic: "Let's go.", portuguese: "Vamos agora." },
+            { english: "I am going to eat.", phonetic: "I'm gonna eat.", portuguese: "Vou comer." },
+            { english: "I cannot do it.", phonetic: "I can't do it.", portuguese: "Não consigo fazer isso." },
+            { english: "Do you want to come?", phonetic: "Wanna come?", portuguese: "Quer vir?" },
+            { english: "What are you doing?", phonetic: "Whatcha doing?", portuguese: "O que você está fazendo?" },
+            { english: "Give me some time.", phonetic: "Gimme some time.", portuguese: "Me dê um tempo." },
+            { english: "Let me try.", phonetic: "Lemme try.", portuguese: "Deixe-me tentar." },
+            { english: "He is not here.", phonetic: "He's not here.", portuguese: "Ele não está aqui." },
+            { english: "I have to go.", phonetic: "I gotta go.", portuguese: "Eu tenho que ir." },
+            { english: "It is kind of funny.", phonetic: "It's kinda funny.", portuguese: "É meio engraçado." },
+            { english: "I will tell you.", phonetic: "I'll tell you.", portuguese: "Eu vou te dizer." },
+            { english: "Did you see that?", phonetic: "D'you see that?", portuguese: "Você viu isso?" },
+            { english: "I am just looking.", phonetic: "Just looking.", portuguese: "Estou apenas olhando." },
+            { english: "Are you okay?", phonetic: "You okay?", portuguese: "Você está bem?" },
+            { english: "I am tired.", phonetic: "I'm beat.", portuguese: "Estou cansado." },
+            { english: "I do not care.", phonetic: "Don't care.", portuguese: "Não me importo." },
+            { english: "That is amazing.", phonetic: "That's awesome!", portuguese: "Isso é incrível!" },
+            { english: "I understand.", phonetic: "Got it.", portuguese: "Eu entendo." },
+            { english: "It does not matter.", phonetic: "Doesn't matter.", portuguese: "Não importa." },
+            { english: "I'm soo confused", phonetic: "i'm stumped", portuguese: "Estou muito confuso" },
+            { english: "let me", phonetic: "lemme", portuguese: "deixe-me" },
+            { english: "Know", phonetic: "no", portuguese: "Saber/Conhecer" },
+            { english: "Tell me more", phonetic: "Fill me in", portuguese: "Me conte mais" },
+            { english: "I understand", phonetic: "I get it", portuguese: "Eu entendo" },
+            { english: "I'm hungry", phonetic: "i could eat", portuguese: "Estou com fome" },
+
+            // Wrong x Mistake (Definitions)
+            { english: "Wrong", phonetic: "Errado (adjetivo)", portuguese: "Errado" },
+            { english: "Your answer is wrong.", phonetic: "Sua resposta está errada.", portuguese: "Sua resposta está errada." }, // Example phrase
+            { english: "Mistake", phonetic: "Erro (substantivo)", portuguese: "Erro" },
+            { english: "I made a mistake.", phonetic: "Eu cometi um erro.", portuguese: "Eu cometi um erro." }, // Example phrase
+
+            // Rude vs Gentil (from last input)
+            { english: "What?", phonetic: "Sorry, what?", portuguese: "O quê?" },
+            { english: "I want coffe", phonetic: "I'll have cooffe - (A have a cooffe)", portuguese: "Eu quero café" },
+            { english: "Repeat", phonetic: "come again?", portuguese: "Repita" },
+            { english: "Stop the car", phonetic: "Here's good", portuguese: "Pare o carro" },
+            { english: "Teacher smith", phonetic: "usar o Mr", portuguese: "Professor Smith" }, // Keeping this as per your instruction
+
+            // Synonyms
+            { english: "But", phonetic: "However", portuguese: "Mas" },
+            { english: "And", phonetic: "In addition", portuguese: "E" },
+            { english: "Also", phonetic: "Moreover", portuguese: "Também" },
+            { english: "So", phonetic: "Therefore", portuguese: "Então" },
+            { english: "Anyway", phonetic: "Nevertheless", portuguese: "De qualquer forma" },
+            { english: "Angry", phonetic: "Furious", portuguese: "Bravo" },
+            { english: "Lovely", phonetic: "Gracious", portuguese: "Adorável" },
+            { english: "Happy", phonetic: "Delighted", portuguese: "Feliz" },
+            { english: "Hard", phonetic: "Challenging", portuguese: "Difícil" },
+
+            // More Slang
+            { english: "man shut your ass up", phonetic: "man shut your ass up", portuguese: "Cale a boca, cara" },
+            { english: "I'll make it up for you", phonetic: "I'll make it up for you", portuguese: "Eu vou te compensar" },
+            { english: "Forgive me", phonetic: "Forgive me", portuguese: "Me perdoe" },
+
+            // Christian Slang
+            { english: "Deus me livre", phonetic: "God forbid (Gád - d mudo - forbiid)", portuguese: "God forbid" },
+            { english: "Se Deus quiser", phonetic: "God Willing (Gád uílin!)", portuguese: "God Willing" },
+            { english: "Deus abençoe", phonetic: "God bless! ((Gád - d mudo)", portuguese: "God bless!" },
+
+            // Grammar notes (treated as cards as per your input style)
+            { english: "Will e going go é a mesma coisa", phonetic: "ninguém liga se vc usar os dois fds", portuguese: "Will e going go são a mesma coisa" },
+            { english: "many x much?", phonetic: "tanto faz , usa (A LOT of)", portuguese: "muito x muito?" },
+
+            // Portuguese to English Verb Conjugations
+            { english: "🇧🇷 Eu sou", phonetic: "🇺🇸 I am", portuguese: "I am" },
+            { english: "🇧🇷 Eu era", phonetic: "🇺🇸 I was", portuguese: "I was" },
+            { english: "🇧🇷 Eu faço", phonetic: "🇺🇸 I do", portuguese: "I do" },
+            { english: "🇧🇷 Eu fiz", phonetic: "🇺🇸 I did", portuguese: "I did" },
+            { english: "🇧🇷 Eu vou", phonetic: "🇺🇸 I go", portuguese: "I go" },
+            { english: "🇧🇷 Eu fui", phonetic: "🇺🇸 I went", portuguese: "I went" },
+            { english: "🇧🇷 Eu tenho", phonetic: "🇺🇸 I have", portuguese: "I have" },
+            { english: "🇧🇷 Eu tinha", phonetic: "🇺🇸 I had", portuguese: "I had" },
+
+            // Finger names (Portuguese to English with phonetic from your input)
+            { english: "🇧🇷 Mindinho", phonetic: "🇺🇸 Pinky", portuguese: "Pinky" },
+            { english: "🇧🇷 Anelar", phonetic: "🇺🇸 Ring finger", portuguese: "Ring finger" },
+            { english: "🇧🇷 Do meio", phonetic: "🇺🇸 Middle finger", portuguese: "Middle finger" },
+            { english: "🇧🇷 Indicador", phonetic: "🇺🇸 Index finger", portuguese: "Index finger" },
+            { english: "🇧🇷 Dedão", phonetic: "🇺🇸 Thumb", portuguese: "Thumb" },
+            { english: "🇧🇷 Palma", phonetic: "🇺🇸 Palm", portuguese: "Palm" },
+            { english: "🇧🇷 Pulso", phonetic: "🇺🇸 Wrist", portuguese: "Wrist" },
+
+            // Polite ways to ask for a moment
+            { english: "Pedir um momento: Could you hold on for am moment?", phonetic: "Could you hold on for am moment?", portuguese: "Pedir um momento: Você poderia esperar um momento?" },
+            { english: "Hang on a second, please", phonetic: "Hang on a second, please", portuguese: "Espere um segundo, por favor" },
+            { english: "I'll be right with you, okay?", phonetic: "I'll be right with you, okay?", portuguese: "Já te atendo, ok?" },
+
+            // Portuguese to English phrases with phonetics
+            { english: "VEM AQUI", phonetic: "CÂM RÍR", portuguese: "COME HERE" },
+            { english: "NÃO HÁ NECESSIDADE", phonetic: "NÔU NÍD", portuguese: "NO NEED" },
+            { english: "ISSO É PRA VOCÊ", phonetic: "DÍS IS FÓR IÚ", portuguese: "THIS IS FOR YOU" },
+            { english: "VOCÊ PODE IR?", phonetic: "KÉN IÚ GÓ?", portuguese: "CAN YOU GO?" },
+            { english: "ATÉ MAIS", phonetic: "CÍ IÚ", portuguese: "SEE YOU" },
+            { english: "EM UM MOMENTO", phonetic: "ÍN A WÁIL", portuguese: "IN A WHILE" },
+            { english: "VOCÊ ESTÁ PRONTO(A)?", phonetic: "ÁR IÚ RÉDÍ?", portuguese: "ARE YOU READY?" },
+            { english: "EU NÃO ENTENDO", phonetic: "ÁI DÔN'T ANDERSTÊND", portuguese: "I DON'T UNDERSTAND" },
+            { english: "VOCÊ PODE ME AJUDAR?", phonetic: "KÉN IÚ HÉLP MÍ?", portuguese: "CAN YOU HELP ME?" },
+            { english: "QUANTO CUSTA ISSO?", phonetic: "RÁU MÁTCH IS THIS?", portuguese: "HOW MUCH IS THIS?" },
+            { english: "ONDE ESTÁ O BANHEIRO?", phonetic: "WÉR IS DÊ BÉFTRÚM?", portuguese: "WHERE IS THE BATHROOM?" },
+            { english: "EU PRECISO DE AJUDA", phonetic: "ÁI NÍD HÉLP", portuguese: "I NEED HELP" },
+            { english: "DESCULPE", phonetic: "SÓRRI", portuguese: "SORRY" },
+            { english: "POR FAVOR", phonetic: "PLÍZ", portuguese: "PLEASE" },
+            { english: "OBRIGADO", phonetic: "FÊNKIÚ", portuguese: "THANK YOU" },
+            { english: "COM LICENÇA", phonetic: "ÍKSCIÚZ MÍ", portuguese: "EXCUSE ME" },
+            { english: "EU NÃO FALO INGLÊS MUITO BEM", phonetic: "ÁI DÔN'T SPÍK ÍNGLÊSH VÉRI UÉL", portuguese: "I DON'T SPEAK ENGLISH VERY WELL" },
+            { english: "PODE REPETIR, POR FAVOR?", phonetic: "KÉN IÚ RIPÍT, PLÍZ?", portuguese: "CAN YOU REPEAT, PLEASE?" },
+            { english: "EU SOU DE...", phonetic: "ÁIM FROM...", portuguese: "I'M FROM..." },
+            { english: "COMO VOCÊ ESTÁ?", phonetic: "RÁU ÁR IÚ?", portuguese: "HOW ARE YOU?" },
+            { english: "ESTOU BEM, OBRIGADO", phonetic: "ÁIM FÁIN, THAENK IÚ", portuguese: "I'M FINE, THANK YOU" },
+            { english: "QUAL É O SEU NOME?", phonetic: "WÁTS IÓR NÊIM?", portuguese: "WHAT'S YOUR NAME?" },
+            { english: "PRAZER EM CONHECÊ-LO(A)", phonetic: "NÁIS TU MÍT IÚ", portuguese: "NICE TO MEET YOU" },
+            { english: "ONDE VOCÊ MORA?", phonetic: "WÉR DÚ IÚ LÍV?", portuguese: "WHERE DO YOU LIVE?" },
+
+            // Example phrase (Portuguese on front, English phonetic/original phrase)
+            { english: "👉 She made a mistake, but cut her some slack.", phonetic: "Ela cometeu um erro, mas pega leve com ela.", portuguese: "She made a mistake, but cut her some slack." },
+
+            // Once, Twice, Many times
+            { english: "Uma vez", phonetic: "Once", portuguese: "Once" },
+            { english: "Duas vezes", phonetic: "Twice", portuguese: "Twice" },
+            { english: "Muitas vezes", phonetic: "Many times", portuguese: "Many times" },
+            { english: "Algumas vezes", phonetic: "Sometimes", portuguese: "Sometimes" },
+            { english: "Outra vez", phonetic: "Again", portuguese: "Again" },
+
+            // Object Pronouns (Portuguese text on front, English example as phonetic)
+            { english: "✅ Pronomes Pessoais do Caso Objeto\n(em inglês: Personal Pronouns – Object Case)\n📌 O que isso significa?\nSão pronomes usados como objeto da frase, ou seja, quando recebem a ação do verbo.", phonetic: "I, me; He called me. You, you; I saw you. He, him; She likes him. She, her; I helped her. It, it; We found it. We, us; They invited us. They, them; I know them.", portuguese: "Personal Pronouns - Object Case" }, // Consolidating this explanation into one card
+
+            // Phrases about not speaking English
+            { english: "Para falar sobre não falar ingles! I'm trying my best to improve my English", phonetic: "I'm trying my best to improve my English", portuguese: "To talk about not speaking English! Estou me esforçando para melhorar meu inglês" },
+
+            // Polite way to say "stop"
+            { english: "Pedi para parar - sem ser rude! right here is great, thanks", phonetic: "right here is great, thanks", portuguese: "Asked to stop - without being rude! Aqui está ótimo, obrigado" },
+
+            // Slang for "Deixe de drama"
+            { english: "🇧🇷 \"Deixe de drama\"", phonetic: "🇺🇸 \"Get over yourself.\"", portuguese: "Get over yourself." },
+
+            // Goodbye alternative
+            { english: "Goodbye", phonetic: "Catch you later - (Cathilarer)", portuguese: "Tchau" },
+
+            // Finger names (with explicit phonetics from your last input)
+            { english: "🇺🇸 Girl", phonetic: "✨ Gârl ✨", portuguese: "Garota" },
+            { english: "🇺🇸 Closet", phonetic: "✨ Kló-zê ✨", portuguese: "Armário" },
+            { english: "🇺🇸 Muscle", phonetic: "✨ Mã-ssoul ✨", portuguese: "Músculo" },
+            { english: "🇺🇸 World", phonetic: "✨ Uãrld ✨", portuguese: "Mundo" },
+            { english: "🇺🇸 Clothes", phonetic: "✨ Clô-ts ✨", portuguese: "Roupas" },
+            { english: "🇺🇸 Salad", phonetic: "✨ Sé-led ✨", portuguese: "Salada" },
+
+            // --- Novas Frases para pedir clarificação e tempo ---
+            // Frases para pedir para a pessoa repetir ou falar mais devagar:
+            { english: "Can you say that again?", phonetic: "Can you say that again?", portuguese: "Você pode repetir isso?" },
+            { english: "Could you speak a little slower?", phonetic: "Could you speak a little slower?", portuguese: "Você pode falar um pouco mais devagar?" },
+            { english: "Sorry, I didn’t catch that.", phonetic: "Sorry, I didn’t catch that.", portuguese: "Desculpe, não entendi isso." },
+            { english: "Can you explain that again?", phonetic: "Can you explain that again?", portuguese: "Você pode explicar isso novamente?" },
+
+            // Frases para admitir que não entendeu algo:
+            { english: "Sorry, I didn’t understand that part.", phonetic: "Sorry, I didn’t understand that part.", portuguese: "Desculpe, não entendi essa parte." },
+            { english: "I’m not sure I understand.", phonetic: "I’m not sure I understand.", portuguese: "Não tenho certeza se entendi." },
+            { english: "I didn’t understand what you said.", phonetic: "I didn’t understand what you said.", portuguese: "Eu não entendi o que você disse." },
+            { english: "Could you explain that in a different way?", phonetic: "Could you explain that in a different way?", portuguese: "Você pode explicar isso de uma forma diferente?" },
+
+            // Frases para pedir ajuda ou mais informações:
+            { english: "Could you give me an example?", phonetic: "Could you give me an example?", portuguese: "Você pode me dar um exemplo?" },
+            { english: "What does [word] mean?", phonetic: "What does [word] mean?", portuguese: "O que significa [palavra]?" },
+            { english: "I’m still learning, sorry.", phonetic: "I’m still learning, sorry.", portuguese: "Ainda estou aprendendo, desculpe." },
+            { english: "Can you help me with this word?", phonetic: "Can you help me with this word?", portuguese: "Você pode me ajudar com essa palavra?" },
+
+            // Frases para pedir tempo para pensar:
+            { english: "Let me think for a second.", phonetic: "Let me think for a second.", portuguese: "Deixe-me pensar por um segundo." },
+            { english: "Give me a moment to think.", phonetic: "Give me a moment to think.", portuguese: "Me dê um momento para pensar." },
+            { english: "I need a moment to think.", phonetic: "I need a moment to think.", portuguese: "Eu preciso de um momento para pensar." },
+
+            // Frases para pedir para a pessoa repetir o que foi dito: (Repetições, mas com contexto diferente)
+            { english: "Sorry, I didn’t hear you well.", phonetic: "Sorry, I didn’t hear you well.", portuguese: "Desculpe, não te ouvi bem." },
+            { english: "Could you say that more clearly?", phonetic: "Could you say that more clearly?", portuguese: "Você pode falar isso de forma mais clara?" },
+            { english: "I missed that, could you say it again?", phonetic: "I missed that, could you say it again?", portuguese: "Eu perdi isso, você pode dizer de novo?" }
+        ];
+
+        let currentCardIndex = 0;
+        const flashcard = document.getElementById('flashcard');
+        const flashcardFront = document.getElementById('flashcard-front');
+        const flashcardBack = document.getElementById('flashcard-back');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        /**
+         * Displays the flashcard content for the given index.
+         * @param {number} index - The index of the card to display.
+         */
+        function displayCard(index) {
+            if (index >= 0 && index < flashcards.length) {
+                // Ensure card is not flipped when displaying new content
+                flashcard.classList.remove('flipped');
+                
+                // Use a small delay to ensure the flip animation completes
+                // before updating content if it was flipped.
+                setTimeout(() => {
+                    flashcardFront.innerHTML = `
+                        <div>${flashcards[index].english}</div>
+                        <div class="phonetic-text">${flashcards[index].phonetic || ''}</div>
+                    `;
+                    flashcardBack.textContent = flashcards[index].portuguese;
+                }, flashcard.classList.contains('flipped') ? 300 : 0); // Adjust delay if needed
+            }
+        }
+
+        /**
+         * Toggles the 'flipped' class on the flashcard to show front/back.
+         */
+        function flipCard() {
+            flashcard.classList.toggle('flipped');
+        }
+
+        /**
+         * Navigates to the next flashcard in the array.
+         * Wraps around to the beginning if at the last card.
+         */
+        function nextCard() {
+            currentCardIndex = (currentCardIndex + 1) % flashcards.length;
+            displayCard(currentCardIndex);
+        }
+
+        /**
+         * Navigates to the previous flashcard in the array.
+         * Wraps around to the end if at the first card.
+         */
+        function prevCard() {
+            currentCardIndex = (currentCardIndex - 1 + flashcards.length) % flashcards.length;
+            displayCard(currentCardIndex);
+        }
+
+        // Event Listeners
+        flashcard.addEventListener('click', flipCard);
+        nextBtn.addEventListener('click', nextCard);
+        prevBtn.addEventListener('click', prevCard);
+
+        // Initial display of the first card when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            displayCard(currentCardIndex);
+        });
+    </script>
+</body>
+</html>
